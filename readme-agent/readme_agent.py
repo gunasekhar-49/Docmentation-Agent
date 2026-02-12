@@ -36,22 +36,30 @@ class ReadmeAgent:
     
     CODE_EXTENSIONS = {'.py', '.js', '.ts', '.jsx', '.tsx', '.go', '.rs', '.java', '.cpp', '.c', '.h'}
     
-    def __init__(self, api_key: Optional[str] = None, model: str = "claude-3-5-sonnet-20241022"):
+    def __init__(self, api_key: Optional[str] = None, model: str = "claude-3-5-sonnet-20241022", dry_run: bool = False):
         """
         Initialize the README Agent.
         
         Args:
             api_key: Optional Anthropic API key. If not provided, uses ANTHROPIC_API_KEY env var
             model: Claude model to use for generation
+            dry_run: If True, generates template README without requiring API key
             
         Raises:
-            ValueError: If API key is not provided and not set in environment
+            ValueError: If API key is not provided and not set in environment (when dry_run=False)
         """
+        self.dry_run = bool(dry_run)
         self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
-        if not self.api_key:
+        
+        # Only require API key if not in dry_run mode
+        if not self.dry_run and not self.api_key:
             raise ValueError("API key must be provided or set in ANTHROPIC_API_KEY environment variable")
         
-        self.client = anthropic.Anthropic(api_key=self.api_key)
+        if not self.dry_run:
+            self.client = anthropic.Anthropic(api_key=self.api_key)
+        else:
+            self.client = None
+            
         self.model = model
         self.temperature = 0.7
         self.max_context_chars = 50000  # ~12.5K tokens max for context
@@ -196,7 +204,7 @@ class ReadmeAgent:
     
     def generate_readme(self, project_info: Dict) -> str:
         """
-        Generate a comprehensive README using Claude.
+        Generate a comprehensive README using Claude or template in dry_run mode.
         
         Args:
             project_info: Dictionary containing project information from gather_project_info
@@ -226,6 +234,10 @@ class ReadmeAgent:
         # Truncate if too large
         if len(context) > self.max_context_chars:
             context = context[:self.max_context_chars] + "\n... (context truncated)"
+        
+        # If in dry_run mode, return a template README
+        if self.dry_run:
+            return self._generate_template_readme(project_info)
         
         prompt = f"""Based on the following project analysis, generate a comprehensive, professional README.md file.
 
@@ -266,6 +278,99 @@ Generate ONLY the README.md content, starting with the title. Do not include any
         )
         
         return message.content[0].text.strip()
+    
+    def _generate_template_readme(self, project_info: Dict) -> str:
+        """
+        Generate a template README for dry_run mode.
+        
+        Args:
+            project_info: Dictionary containing project information
+            
+        Returns:
+            Template README content
+        """
+        name = project_info['project_name']
+        structure = project_info['directory_structure']
+        files = project_info['important_files']
+        
+        readme = f"""# {name}
+
+A comprehensive Python project for documentation generation and AI-powered analysis.
+
+## 📋 Overview
+
+This project provides automated tools for generating professional documentation, including docstrings and README files using AI.
+
+## 🚀 Features
+
+- **Auto-Docstring Generation**: Automatically generate Python docstrings using AI
+- **README Generator**: Create comprehensive README files from project structure
+- **Batch Processing**: Process multiple files at once
+- **AI-Powered Analysis**: Intelligent code analysis and documentation
+
+## 📁 Project Structure
+
+```
+{structure}
+```
+
+## ⚙️ Requirements & Dependencies
+
+"""
+        
+        if 'requirements.txt' in files:
+            readme += f"""
+```
+{files['requirements.txt']}
+```
+"""
+        else:
+            readme += "See requirements.txt for dependencies\n"
+        
+        readme += f"""
+## 🔧 Installation
+
+1. Clone the repository
+2. Create a virtual environment:
+   ```bash
+   python -m venv .venv
+   ```
+3. Activate the virtual environment:
+   - On Windows: `.venv\\Scripts\\activate`
+   - On macOS/Linux: `source .venv/bin/activate`
+4. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+## 💻 Usage
+
+### Generate Docstrings
+- Upload a Python file to auto-generate docstrings
+- Batch process multiple files simultaneously
+
+### Generate README
+- Upload your project files
+- AI analyzes the structure and generates a comprehensive README
+
+## 📝 Configuration
+
+Configure the application using environment variables or config files.
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+---
+
+*Auto-generated README using AI Documentation Generator*
+"""
+        
+        return readme
     
     def process_directory(self, directory: str, output_path: str = "README.md") -> str:
         """

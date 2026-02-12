@@ -19,11 +19,13 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 import importlib.util
 import tempfile
 import shutil
 from pathlib import Path
+import os
 
 # ============================================================================
 # Load Documentation Agents
@@ -72,25 +74,19 @@ docstring_agent = DocstringAgent(dry_run=True)
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 
+# Mount static files
+STATIC_DIR = Path("static")
+if STATIC_DIR.exists():
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+
 # ============================================================================
 # DOCUMENTATION ENDPOINTS
 # ============================================================================
 
 @app.get("/")
 async def root():
-    """API root endpoint"""
-    return {
-        "name": "Documentation + AI Agents API",
-        "version": "1.0.0",
-        "systems": {
-            "documentation": "Auto-generate docstrings and README files",
-            "agentic_ai": "AI agents with Gemini API"
-        },
-        "endpoints": {
-            "docs": "http://localhost:8000/docs",
-            "redoc": "http://localhost:8000/redoc"
-        }
-    }
+    """Redirect to UI"""
+    return RedirectResponse(url="/static/index.html")
 
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
@@ -154,19 +150,41 @@ async def batch_process(files: list[UploadFile] = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/generate-readme")
-async def generate_readme(directory: str = "."):
-    """Generate README for project directory"""
+async def generate_readme(files: list[UploadFile] = File(...)):
+    """Generate README by analyzing uploaded project files"""
+    temp_dir = None
     try:
+        # Create temporary directory for uploaded files
+        temp_dir = tempfile.mkdtemp()
+        
+        # Save all uploaded files maintaining directory structure
+        for file in files:
+            file_path = Path(temp_dir) / file.filename
+            # Create subdirectories if needed
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            content = await file.read()
+            with open(file_path, 'wb') as f:
+                f.write(content)
+        
+        # Analyze the uploaded project structure using dry_run mode
         readme_agent = ReadmeAgent(dry_run=True)
-        readme_content = readme_agent.generate_readme(directory)
+        project_info = readme_agent.gather_project_info(temp_dir)
+        
+        # Generate comprehensive README
+        readme_content = readme_agent.generate_readme(project_info)
         
         return {
             "status": "success",
-            "directory": directory,
+            "files_analyzed": len(files),
             "readme_content": readme_content
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Error generating README: {str(e)}")
+    finally:
+        # Clean up temporary directory
+        if temp_dir and os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir)
 
 # ============================================================================
 # AGENTIC AI ENDPOINTS

@@ -494,8 +494,15 @@
                     <h2 class="card-title">Generate README</h2>
                 </div>
                 <div class="card-body">
-                    <p>Auto-generate a professional README for your project</p>
-                    <input type="text" id="dirInput" placeholder="Directory path (or leave empty for current)" value=".">
+                    <p>Upload your project files and auto-generate a professional README</p>
+                    <div class="upload-area" id="uploadArea3" onclick="document.getElementById('fileInput3').click()">
+                        <span class="upload-icon">📂</span>
+                        <p>Click or drag project files here</p>
+                        <input type="file" id="fileInput3" accept=".py,.js,.json,.md,.txt,.yaml,.yml,.toml,.cfg" multiple>
+                    </div>
+                    <div class="file-counter" id="fileCount3">
+                        📊 Selected: <strong><span id="count3">0</span> files</strong>
+                    </div>
                     <button id="generateReadmeBtn"><i class="fas fa-file-alt"></i> Generate README</button>
                     <div class="loader" id="loader3"></div>
                 </div>
@@ -550,6 +557,10 @@
             updateFileCounter('count2', 'fileCount2', e.target.files.length);
         });
 
+        document.getElementById('fileInput3').addEventListener('change', (e) => {
+            updateFileCounter('count3', 'fileCount3', e.target.files.length);
+        });
+
         function updateFileCounter(countId, countDivId, count) {
             const countSpan = document.getElementById(countId);
             const fileCountDiv = document.getElementById(countDivId);
@@ -561,7 +572,7 @@
             }
         }
 
-        ['uploadArea1', 'uploadArea2'].forEach(id => {
+        ['uploadArea1', 'uploadArea2', 'uploadArea3'].forEach(id => {
             const area = document.getElementById(id);
             area.addEventListener('dragover', (e) => {
                 e.preventDefault();
@@ -642,18 +653,21 @@
         });
 
         document.getElementById('generateReadmeBtn').addEventListener('click', async () => {
+            const fileInput = document.getElementById('fileInput3');
+            if (!fileInput.files.length) return alert('Please select project files');
+
             const loader = document.getElementById('loader3');
             const btn = document.getElementById('generateReadmeBtn');
-            const dir = document.getElementById('dirInput').value || '.';
             loader.classList.add('show');
             btn.disabled = true;
 
+            const formData = new FormData();
+            for (let file of fileInput.files) {
+                formData.append('files', file);
+            }
+
             try {
-                const response = await fetch('/generate-readme', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ directory: dir })
-                });
+                const response = await fetch('/generate-readme', { method: 'POST', body: formData });
                 const data = await response.json();
                 if (data.status === 'success') {
                     displayReadmeResult(data);
