@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-FastAPI Web Server for AI Docstring Generation
-Upload Python files and get docstrings automatically!
-Access: http://localhost:8000/docs (Swagger UI)
+Web API server for AI docstring and README generation.
+Start: python api_server.py
+Access: http://localhost:8001/docs (Swagger UI)
 """
 
 import sys
@@ -10,31 +10,37 @@ import os
 sys.path.insert(0, os.getcwd())
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.responses import JSONResponse, FileResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
 import importlib.util
 import tempfile
 import shutil
 from pathlib import Path
 
-# Load the DocstringAgent
+# Load DocstringAgent
 spec = importlib.util.spec_from_file_location('docstring_agent', 'docstring-agent/docstring_agent.py')
 docstring_agent_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(docstring_agent_module)
 DocstringAgent = docstring_agent_module.DocstringAgent
 
-# Load the ReadmeAgent
+# Load ReadmeAgent
 spec_readme = importlib.util.spec_from_file_location('readme_agent', 'readme-agent/readme_agent.py')
 readme_agent_module = importlib.util.module_from_spec(spec_readme)
 spec_readme.loader.exec_module(readme_agent_module)
 ReadmeAgent = readme_agent_module.ReadmeAgent
 
-# Create FastAPI app
+# Create FastAPI app with Swagger UI
 app = FastAPI(
     title="AI Docstring Generator",
     description="Upload Python files and get AI-generated docstrings automatically!",
     version="1.0.0"
 )
+
+# Initialize agents
+agent = DocstringAgent(dry_run=True)
+
+# Create uploads directory
+UPLOAD_DIR = Path("uploads")
+UPLOAD_DIR.mkdir(exist_ok=True)
 
 # Initialize the agent with dry-run mode
 agent = DocstringAgent(dry_run=True)
