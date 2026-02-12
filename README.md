@@ -1,3 +1,90 @@
+# AI Agents for Code Documentation
+
+Two AI agents that automate Python documentation: one generates docstrings from code, and the other generates a project README by analyzing structure and key files. Designed for safe local runs (dry-run mode) and easy batch processing.
+
+## Highlights
+- Docstring agent: AST-based parsing for functions, classes, methods, and async defs.
+- README agent: project analysis, important-file scanning, and context-aware README generation.
+- Dry-run fallback: deterministic docstrings without any API key.
+- Google or NumPy docstring styles.
+- Batch processing with optional concurrency and smart directory ignores.
+
+## Quickstart
+
+### 1) Setup
+```bash
+python -m venv .venv
+```
+```bash
+# Windows
+.venv\Scripts\activate
+```
+```bash
+pip install -r requirements.txt
+```
+
+### 2) Run examples (dry-run)
+```bash
+python scripts/run_docstring_dry.py
+python scripts/run_batch_dry.py
+```
+
+### 3) Run tests
+```bash
+python -m pytest -q
+```
+
+## Usage
+
+### Docstring agent
+```python
+from docstring_agent import DocstringAgent
+
+agent = DocstringAgent(dry_run=True, docstring_style="google")
+
+# Single file
+result = agent.process_file("path/to/file.py")
+
+# Batch directory
+agent.batch_process_directory(
+    "src",
+    output_directory="output_docs",
+    use_concurrency=True,
+    max_workers=4,
+)
+```
+
+### README agent
+```python
+from readme_agent import ReadmeAgent
+
+agent = ReadmeAgent()
+readme = agent.process_directory(".", output_path="README.md")
+```
+
+## API Key (optional)
+If you want live model output, set `ANTHROPIC_API_KEY` in your environment. Dry-run works without any API key.
+
+```bash
+# Windows (PowerShell)
+$env:ANTHROPIC_API_KEY="your_key_here"
+```
+
+## Project Structure
+```
+docstring-agent/   # Docstring generation agent
+readme-agent/      # README generation agent
+examples/          # Example scripts and sample code
+scripts/           # Runner scripts (dry-run)
+tests/             # Unit tests
+```
+
+## Notes & Limitations
+- Dry-run uses a deterministic template; for best results, use a real API key.
+- Generated outputs are intended for review; always scan before committing.
+
+## License
+MIT — see `LICENSE`.
 # AI Agents for Code Documentation 🚀
 
 A comprehensive suite of intelligent AI agents powered by Claude that automate code documentation tasks. This project includes two powerful agents: **Docstring Generation Agent** and **README Generation Agent**.
@@ -917,5 +1004,6 @@ A: Process in smaller batches or increase `max_context_chars` and `max_depth` pa
 
 ---
 
-#   D o c m e n t a t i o n - A g e n t  
+#   D o c m e n t a t i o n - A g e n t 
+ 
  
