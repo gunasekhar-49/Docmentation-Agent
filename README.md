@@ -1061,35 +1061,6 @@ If you use these agents, share your experience!
 - [ ] Integration with GitHub Actions
 - [ ] Real-time collaboration features
 
----
 
-**Made with ❤️ for the Hackathon Challenge**
 
-*Last Updated: February 2026*
-
----
-
-## FAQ
-
-**Q: Can I use this commercially?**  
-A: Yes! MIT license allows commercial use.
-
-**Q: How much does it cost to run these agents?**  
-A: Typically $0.01-0.10 per file, depending on size. See Performance section.
-
-**Q: Can I process non-Python code?**  
-A: Currently Python only, but extensible to other languages.
-
-**Q: What if my code has errors?**  
-A: The agents handle invalid Python gracefully and skip problematic files.
-
-**Q: Can I customize the docstring format?**  
-A: Yes, by modifying the prompt in `generate_docstring()` method.
-
-**Q: How do I handle very large projects?**  
-A: Process in smaller batches or increase `max_context_chars` and `max_depth` parameters.
-
----
-
-#
 
