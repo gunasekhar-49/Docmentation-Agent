@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Documentation Generator</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #667eea;
+            --secondary: #764ba2;
+            --success: #28a745;
+            --error: #dc3545;
+            --dark: #2c3e50;
+        }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 30px 20px;
+            color: var(--dark);
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 50px;
+        }
+        h1 {
+            font-size: 3.2em;
+            font-weight: 800;
+            margin-bottom: 12px;
+            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.25);
+        }
+        .subtitle {
+            font-size: 1.2em;
+            opacity: 0.95;
+            font-weight: 400;
+            margin-bottom: 35px;
+        }
+        .header-stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .stat {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            padding: 18px 30px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            min-width: 140px;
+        }
+        .stat-number {
+            font-size: 2.2em;
+            font-weight: 800;
+            display: block;
+            margin-bottom: 5px;
+        }
+        .stat-label {
+            font-size: 0.85em;
+            opacity: 0.9;
+            font-weight: 500;
+        }
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+            gap: 28px;
+            margin-bottom: 50px;
+        }
+        .card {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            position: relative;
+        }
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+        }
+        .card:hover {
+            transform: translateY(-12px);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        }
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 28px 28px 18px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.08));
+            border-bottom: 1px solid rgba(102, 126, 234, 0.15);
+        }
+        .card-icon {
+            font-size: 2.8em;
+            min-width: 65px;
+            text-align: center;
+            line-height: 1;
+        }
+        .card-title {
+            color: var(--primary);
+            font-size: 1.65em;
+            font-weight: 700;
+            margin: 0;
+        }
+        .card-body {
+            padding: 22px 28px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .card p {
+            color: #666;
+            margin-bottom: 18px;
+            line-height: 1.5;
+            font-size: 0.95em;
+        }
+        .upload-area {
+            border: 2px dashed var(--primary);
+            border-radius: 12px;
+            padding: 50px 25px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.04));
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 180px;
+        }
+        .upload-area::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s;
+            pointer-events: none;
+        }
+        .upload-area:hover::before { left: 100%; }
+        .upload-area:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.12), rgba(118, 75, 162, 0.08));
+            border-color: var(--secondary);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.18);
+        }
+        .upload-area.dragover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.15));
+            border-color: var(--secondary);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.25);
+        }
+        input[type="file"] { display: none; }
+        .upload-icon {
+            font-size: 3.5em;
+            margin-bottom: 12px;
+            display: block;
+            animation: float 3s ease-in-out infinite;
+            line-height: 1;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+        }
+        .upload-area p {
+            margin: 0;
+            color: #666;
+            font-weight: 500;
+            font-size: 0.95em;
+        }
+        .file-counter {
+            color: var(--primary);
+            font-weight: 700;
+            margin: 10px 0 15px 0;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.12), rgba(118, 75, 162, 0.08));
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 8px;
+            display: none;
+            font-size: 1em;
+            text-align: center;
+            animation: slideIn 0.3s ease;
+        }
+        .file-counter.show { display: block; }
+        .file-counter strong {
+            color: var(--secondary);
+            font-size: 1.1em;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        button {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 10px;
+            font-size: 0.95em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: auto;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.35);
+        }
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 22px rgba(102, 126, 234, 0.45);
+        }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 0.95em;
+            transition: all 0.3s ease;
+            margin-bottom: 15px;
+            font-family: inherit;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.12);
+        }
+        .results-section {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            margin-top: 40px;
+            overflow: hidden;
+            display: none;
+            border: 1px solid rgba(0, 0, 0, 0.06);
+        }
+        .results-section.show { display: block; }
+        .results-header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 28px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .results-title {
+            font-size: 1.7em;
+            font-weight: 700;
+            margin: 0;
+        }
+        .results-stats {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .result-stat {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 12px 18px;
+            border-radius: 8px;
+            font-size: 0.95em;
+            font-weight: 600;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e8e8e8;
+            background: #f8f9fa;
+            overflow-x: auto;
+        }
+        .tab {
+            padding: 16px 24px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            white-space: nowrap;
+        }
+        .tab:hover { color: var(--primary); background: rgba(102, 126, 234, 0.06); }
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            background: white;
+        }
+        .results-content { padding: 32px; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .result-file {
+            margin-bottom: 24px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            border-left: 5px solid var(--primary);
+        }
+        .result-file.success { border-left-color: var(--success); }
+        .result-file.error { border-left-color: var(--error); }
+        .file-name {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .status-badge.success {
+            background: rgba(40, 167, 69, 0.15);
+            color: var(--success);
+        }
+        .status-badge.error {
+            background: rgba(220, 53, 69, 0.15);
+            color: var(--error);
+        }
+        .code-label {
+            font-size: 0.9em;
+            font-weight: 700;
+            color: var(--dark);
+            margin-top: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .code-label-icon { color: var(--primary); }
+        .code-block {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 10px;
+            overflow-x: auto;
+            margin-top: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            max-height: 450px;
+            overflow-y: auto;
+            border: 1px solid #333;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+            display: none;
+        }
+        .loader.show { display: block; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 24px;
+            margin-top: 50px;
+            padding: 32px;
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .feature {
+            text-align: center;
+            color: white;
+        }
+        .feature-icon {
+            font-size: 2.8em;
+            margin-bottom: 12px;
+            display: block;
+        }
+        .feature h3 {
+            margin-bottom: 8px;
+            font-weight: 700;
+            font-size: 1.1em;
+        }
+        .feature p {
+            font-size: 0.9em;
+            opacity: 0.9;
+            line-height: 1.4;
+        }
+        .error-message {
+            background: rgba(220, 53, 69, 0.15);
+            color: var(--error);
+            padding: 15px 18px;
+            border-radius: 8px;
+            margin-top: 12px;
+            border-left: 4px solid var(--error);
+            font-weight: 500;
+        }
+        @media (max-width: 768px) {
+            h1 { font-size: 2.3em; }
+            .cards { grid-template-columns: 1fr; gap: 20px; }
+            .results-header { flex-direction: column; align-items: flex-start; }
+            .card-body { padding: 18px 20px; }
+            .upload-area { min-height: 140px; padding: 35px 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 AI Documentation Generator</h1>
+            <p class="subtitle">Automatically generate docstrings and README files with AI</p>
+            <div class="header-stats">
+                <div class="stat">
+                    <span class="stat-number" id="totalProcessed">0</span>
+                    <span class="stat-label">Files Processed</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-number" id="totalSuccess">0</span>
+                    <span class="stat-label">Successful</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-number" id="totalErrors">0</span>
+                    <span class="stat-label">Errors</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="cards">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-icon">📄</span>
+                    <h2 class="card-title">Single File</h2>
+                </div>
+                <div class="card-body">
+                    <p>Upload a Python file to generate professional docstrings automatically</p>
+                    <div class="upload-area" id="uploadArea1" onclick="document.getElementById('fileInput1').click()">
+                        <span class="upload-icon">📁</span>
+                        <p>Click or drag a Python file here</p>
+                        <input type="file" id="fileInput1" accept=".py">
+                    </div>
+                    <div class="file-counter" id="fileCount1">
+                        📊 Selected: <strong><span id="count1">0</span> file</strong>
+                    </div>
+                    <button id="processBtn1"><i class="fas fa-magic"></i> Generate Docstrings</button>
+                    <div class="loader" id="loader1"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-icon">📦</span>
+                    <h2 class="card-title">Batch Process</h2>
+                </div>
+                <div class="card-body">
+                    <p>Upload multiple Python files for efficient batch docstring generation</p>
+                    <div class="upload-area" id="uploadArea2" onclick="document.getElementById('fileInput2').click()">
+                        <span class="upload-icon">📂</span>
+                        <p>Click or drag multiple files here</p>
+                        <input type="file" id="fileInput2" accept=".py" multiple>
+                    </div>
+                    <div class="file-counter" id="fileCount2">
+                        📊 Selected: <strong><span id="count2">0</span> files</strong>
+                    </div>
+                    <button id="processBtn2"><i class="fas fa-bolt"></i> Process All Files</button>
+                    <div class="loader" id="loader2"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-icon">📝</span>
+                    <h2 class="card-title">Generate README</h2>
+                </div>
+                <div class="card-body">
+                    <p>Auto-generate a professional README for your project</p>
+                    <input type="text" id="dirInput" placeholder="Directory path (or leave empty for current)" value=".">
+                    <button id="generateReadmeBtn"><i class="fas fa-file-alt"></i> Generate README</button>
+                    <div class="loader" id="loader3"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="results-section" id="results">
+            <div class="results-header">
+                <h2 class="results-title">✅ Processing Results</h2>
+                <div class="results-stats">
+                    <div class="result-stat">Total: <span id="resultTotal">0</span></div>
+                    <div class="result-stat">Success: <span id="resultSuccess">0</span></div>
+                    <div class="result-stat">Failed: <span id="resultFailed">0</span></div>
+                </div>
+            </div>
+            <div class="tabs" id="resultTabs"></div>
+            <div class="results-content" id="resultsContent"></div>
+        </div>
+
+        <div class="features">
+            <div class="feature">
+                <div class="feature-icon">⚡</div>
+                <h3>Lightning Fast</h3>
+                <p>Instant docstring generation</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🤖</div>
+                <h3>AI Powered</h3>
+                <p>Smart code analysis</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">✨</div>
+                <h3>Professional</h3>
+                <p>High-quality output</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🔒</div>
+                <h3>Secure</h3>
+                <p>Your code stays private</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let globalStats = { processed: 0, success: 0, errors: 0 };
+
+        document.getElementById('fileInput1').addEventListener('change', (e) => {
+            updateFileCounter('count1', 'fileCount1', e.target.files.length);
+        });
+
+        document.getElementById('fileInput2').addEventListener('change', (e) => {
+            updateFileCounter('count2', 'fileCount2', e.target.files.length);
+        });
+
+        function updateFileCounter(countId, countDivId, count) {
+            const countSpan = document.getElementById(countId);
+            const fileCountDiv = document.getElementById(countDivId);
+            if (count > 0) {
+                countSpan.textContent = count;
+                fileCountDiv.classList.add('show');
+            } else {
+                fileCountDiv.classList.remove('show');
+            }
+        }
+
+        ['uploadArea1', 'uploadArea2'].forEach(id => {
+            const area = document.getElementById(id);
+            area.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                area.classList.add('dragover');
+            });
+            area.addEventListener('dragleave', () => {
+                area.classList.remove('dragover');
+            });
+            area.addEventListener('drop', (e) => {
+                e.preventDefault();
+                area.classList.remove('dragover');
+                const fileInput = area.querySelector('input[type="file"]');
+                fileInput.files = e.dataTransfer.files;
+                const event = new Event('change', { bubbles: true });
+                fileInput.dispatchEvent(event);
+            });
+        });
+
+        document.getElementById('processBtn1').addEventListener('click', async () => {
+            const fileInput = document.getElementById('fileInput1');
+            if (!fileInput.files.length) return alert('Please select a file');
+
+            const loader = document.getElementById('loader1');
+            const btn = document.getElementById('processBtn1');
+            loader.classList.add('show');
+            btn.disabled = true;
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const response = await fetch('/upload', { method: 'POST', body: formData });
+                const data = await response.json();
+                if (data.status === 'success') {
+                    displaySingleResult(data);
+                    globalStats.processed++;
+                    globalStats.success++;
+                    updateGlobalStats();
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                loader.classList.remove('show');
+                btn.disabled = false;
+            }
+        });
+
+        document.getElementById('processBtn2').addEventListener('click', async () => {
+            const fileInput = document.getElementById('fileInput2');
+            if (!fileInput.files.length) return alert('Please select files');
+
+            const loader = document.getElementById('loader2');
+            const btn = document.getElementById('processBtn2');
+            loader.classList.add('show');
+            btn.disabled = true;
+
+            const formData = new FormData();
+            for (let file of fileInput.files) {
+                formData.append('files', file);
+            }
+
+            try {
+                const response = await fetch('/batch', { method: 'POST', body: formData });
+                const data = await response.json();
+                if (data.status === 'success') {
+                    displayBatchResults(data);
+                    globalStats.processed += data.total_files;
+                    globalStats.success += data.results.filter(r => r.status === 'success').length;
+                    globalStats.errors += data.results.filter(r => r.status === 'error').length;
+                    updateGlobalStats();
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                loader.classList.remove('show');
+                btn.disabled = false;
+            }
+        });
+
+        document.getElementById('generateReadmeBtn').addEventListener('click', async () => {
+            const loader = document.getElementById('loader3');
+            const btn = document.getElementById('generateReadmeBtn');
+            const dir = document.getElementById('dirInput').value || '.';
+            loader.classList.add('show');
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/generate-readme', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ directory: dir })
+                });
+                const data = await response.json();
+                if (data.status === 'success') {
+                    displayReadmeResult(data);
+                    globalStats.processed++;
+                    globalStats.success++;
+                    updateGlobalStats();
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                loader.classList.remove('show');
+                btn.disabled = false;
+            }
+        });
+
+        function displaySingleResult(data) {
+            document.getElementById('resultTotal').textContent = '1';
+            document.getElementById('resultSuccess').textContent = '1';
+            document.getElementById('resultFailed').textContent = '0';
+
+            document.getElementById('resultTabs').innerHTML = `<button class="tab active" onclick="switchTab(event)">Generated Code</button>`;
+
+            document.getElementById('resultsContent').innerHTML = `
+                <div class="result-file success">
+                    <div class="file-name">
+                        <i class="fas fa-check-circle"></i>
+                        ${data.filename}
+                        <span class="status-badge success">Success</span>
+                    </div>
+                    <div class="code-label">
+                        <i class="fas fa-code code-label-icon"></i>
+                        Generated Code with Docstrings
+                    </div>
+                    <pre class="code-block">${escapeHtml(data.generated_code)}</pre>
+                </div>
+            `;
+
+            document.getElementById('results').classList.add('show');
+        }
+
+        function displayBatchResults(data) {
+            const successCount = data.results.filter(r => r.status === 'success').length;
+            const errorCount = data.results.filter(r => r.status === 'error').length;
+
+            document.getElementById('resultTotal').textContent = data.total_files;
+            document.getElementById('resultSuccess').textContent = successCount;
+            document.getElementById('resultFailed').textContent = errorCount;
+
+            let tabs = '';
+            data.results.forEach((result, idx) => {
+                tabs += `<button class="tab ${idx === 0 ? 'active' : ''}" onclick="switchTab(event)">
+                    ${result.status === 'success' ? '<i class="fas fa-check-circle"></i>' : '<i class="fas fa-exclamation-circle"></i>'}
+                    ${result.filename}
+                </button>`;
+            });
+            document.getElementById('resultTabs').innerHTML = tabs;
+
+            let content = '';
+            data.results.forEach((result, idx) => {
+                const statusClass = result.status === 'success' ? 'success' : 'error';
+                content += `
+                    <div class="tab-content ${idx === 0 ? 'active' : ''}" style="display: ${idx === 0 ? 'block' : 'none'};">
+                        <div class="result-file ${statusClass}">
+                            <div class="file-name">
+                                ${result.status === 'success' ? '<i class="fas fa-check-circle"></i>' : '<i class="fas fa-exclamation-circle"></i>'}
+                                ${result.filename}
+                                <span class="status-badge ${statusClass}">${result.status}</span>
+                            </div>
+                            ${result.status === 'success' && result.generated_code ? `
+                                <div class="code-label"><i class="fas fa-code code-label-icon"></i>Generated Code</div>
+                                <pre class="code-block">${escapeHtml(result.generated_code)}</pre>
+                            ` : result.error ? `<div class="error-message"><strong>Error:</strong> ${result.error}</div>` : `<p>${result.message || 'Skipped'}</p>`}
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('resultsContent').innerHTML = content;
+            document.getElementById('results').classList.add('show');
+        }
+
+        function displayReadmeResult(data) {
+            document.getElementById('resultTotal').textContent = '1';
+            document.getElementById('resultSuccess').textContent = '1';
+            document.getElementById('resultFailed').textContent = '0';
+
+            document.getElementById('resultTabs').innerHTML = `<button class="tab active" onclick="switchTab(event)">Generated README</button>`;
+
+            document.getElementById('resultsContent').innerHTML = `
+                <div class="result-file success">
+                    <div class="file-name">
+                        <i class="fas fa-check-circle"></i>
+                        README.md
+                        <span class="status-badge success">Success</span>
+                    </div>
+                    <div class="code-label"><i class="fas fa-file-alt code-label-icon"></i>Project README</div>
+                    <pre class="code-block">${escapeHtml(data.readme_content)}</pre>
+                </div>
+            `;
+
+            document.getElementById('results').classList.add('show');
+        }
+
+        function switchTab(event) {
+            const buttons = document.querySelectorAll('.tab');
+            const contents = document.querySelectorAll('.tab-content');
+            buttons.forEach(b => b.classList.remove('active'));
+            contents.forEach(c => c.style.display = 'none');
+            event.target.closest('.tab').classList.add('active');
+            const index = Array.from(buttons).indexOf(event.target.closest('.tab'));
+            if (contents[index]) contents[index].style.display = 'block';
+        }
+
+        function updateGlobalStats() {
+            document.getElementById('totalProcessed').textContent = globalStats.processed;
+            document.getElementById('totalSuccess').textContent = globalStats.success;
+            document.getElementById('totalErrors').textContent = globalStats.errors;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
