@@ -148,7 +148,11 @@ async def batch_process(files: list[UploadFile] = File(...)):
                     "error": str(e)
                 })
         
-        return {"status": "success", "results": results}
+        return {
+            "status": "success",
+            "total_files": len(files),
+            "results": results
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -157,18 +161,30 @@ async def generate_readme(files: list[UploadFile] = File(...)):
     """Generate README by analyzing uploaded project files"""
     temp_dir = None
     try:
+        if not files or len(files) == 0:
+            raise HTTPException(status_code=400, detail="No files provided")
+        
         # Create temporary directory for uploaded files
         temp_dir = tempfile.mkdtemp()
+        file_count = 0
         
         # Save all uploaded files maintaining directory structure
         for file in files:
+            if not file.filename:
+                continue
+                
             file_path = Path(temp_dir) / file.filename
             # Create subdirectories if needed
             file_path.parent.mkdir(parents=True, exist_ok=True)
             
             content = await file.read()
-            with open(file_path, 'wb') as f:
-                f.write(content)
+            if content:  # Only save if there's content
+                with open(file_path, 'wb') as f:
+                    f.write(content)
+                file_count += 1
+        
+        if file_count == 0:
+            raise HTTPException(status_code=400, detail="No valid files to analyze")
         
         # Analyze the uploaded project structure using dry_run mode
         readme_agent = ReadmeAgent(dry_run=True)
@@ -179,15 +195,23 @@ async def generate_readme(files: list[UploadFile] = File(...)):
         
         return {
             "status": "success",
-            "files_analyzed": len(files),
+            "files_analyzed": file_count,
             "readme_content": readme_content
         }
+    except HTTPException:
+        raise
     except Exception as e:
+        import traceback
+        print(f"README Generation Error: {str(e)}")
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Error generating README: {str(e)}")
     finally:
         # Clean up temporary directory
         if temp_dir and os.path.exists(temp_dir):
-            shutil.rmtree(temp_dir)
+            try:
+                shutil.rmtree(temp_dir)
+            except:
+                pass
 
 # ============================================================================
 # AGENTIC AI ENDPOINTS
