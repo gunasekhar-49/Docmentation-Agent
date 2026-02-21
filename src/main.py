@@ -19,7 +19,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 import importlib.util
 import tempfile
@@ -85,8 +85,11 @@ if STATIC_DIR.exists():
 
 @app.get("/")
 async def root():
-    """Redirect to UI"""
-    return RedirectResponse(url="/static/index.html")
+    """Serve the UI"""
+    index_file = Path("static/index.html")
+    if index_file.exists():
+        return FileResponse(str(index_file))
+    return {"error": "index.html not found"}
 
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
